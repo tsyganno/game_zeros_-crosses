@@ -1,4 +1,4 @@
-# game_zeros_-crosses
+# game_zeros_crosses
 Игра " Обратные крестики-нолики"
 
 
