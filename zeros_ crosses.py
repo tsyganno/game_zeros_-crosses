@@ -2,6 +2,23 @@ import random
 from termcolor import colored
 
 
+def limit_recursion(limit):
+    """ Контроль глубины рекурсии """
+    def inner(func):
+        func.count = 0
+
+        def wrapper(*args, **kwargs):
+            func.count += 1
+            if func.count < limit:
+                result = func(*args, **kwargs)
+            else:
+                result = None
+            func.count -= 1
+            return result
+        return wrapper
+    return inner
+
+
 def show_matrix_board(matrix):
     """ Вывод игровой доски на экран """
     print()
@@ -31,7 +48,8 @@ def input_by_human_cell(sign):
         elif digit not in game_digits and not digit.isdigit():
             print('Вы вводите не число, а набор символов, попробуйте еще раз.')
         elif digit not in game_digits and digit.isdigit() and (int(digit) > 100 or int(digit) < 1):
-            print('Введенное число не попадает под диапазон числовых значений ячеек, от 1 до 100, включительно.\nПопробуйте еще раз.')
+            print(
+                'Введенное число не попадает под диапазон числовых значений ячеек, от 1 до 100, включительно.\nПопробуйте еще раз.')
     game_digits.append(digit)
     return digit
 
@@ -46,19 +64,35 @@ def record_human_sign(sign, digit, matrix):
     return matrix
 
 
-def record_computer_sign(sign, matrix):
-    """ Запись символа в ячейку игровой доски, выбранную компьютером """
+def create_random_digit():
+    """ Создание случайного числа """
     while True:
-        random_digit = str(random.randint(1, 100))
-        if random_digit not in game_digits:
+        digit = str(random.randint(1, 100))
+        if digit not in game_digits:
             break
+    return digit
+
+
+@limit_recursion(limit=100)
+def record_computer_sign(sign, hum_sign, matrix):
+    """ Запись символа в ячейку игровой доски, выбранную компьютером """
+    random_digit = create_random_digit()
     for i in range(len(matrix)):
         for j in range(len(matrix[i])):
             if random_digit == matrix[i][j]:
+                digit_of_matrix = matrix[i][j]
                 matrix[i][j] = sign + '  '
-                break
-    game_digits.append(random_digit)
-    print(f'Компьютер записывает свой знак в ячейку под номером "{random_digit}"')
+                if examination(matrix, hum_sign, sign) != 'Вы победили!!!':
+                    game_digits.append(random_digit)
+                    print(f'Компьютер записывает свой знак в ячейку под номером "{random_digit}"')
+                    break
+                elif len(game_digits) == 98:
+                    matrix[i][j] = sign + '  '
+                    game_digits.append(random_digit)
+                    print(f'Компьютер записывает свой знак в ячейку под номером "{random_digit}"')
+                else:
+                    matrix[i][j] = digit_of_matrix
+                    record_computer_sign(sign, hum_sign, matrix)
     return matrix
 
 
@@ -74,21 +108,26 @@ def examination(matrix, hum_sign, comp_sign):
     red_five_0 = (red_0 + '  ') * 5
     for line in matrix:
         joined_line = ''.join(line)
-        if (green_five_x in joined_line and hum_sign == green_x) or (green_five_0 in joined_line and hum_sign == green_0):
+        if (green_five_x in joined_line and hum_sign == green_x) or (
+                green_five_0 in joined_line and hum_sign == green_0):
             return 'Вы проиграли!!!'
         elif (red_five_x in joined_line and comp_sign == red_x) or (red_five_0 in joined_line and comp_sign == red_0):
             return 'Вы победили!!!'
     for column in zip(*matrix):
         joined_column = ''.join(column)
-        if (green_five_x in joined_column and hum_sign == green_x) or (green_five_0 in joined_column and hum_sign == green_0):
+        if (green_five_x in joined_column and hum_sign == green_x) or (
+                green_five_0 in joined_column and hum_sign == green_0):
             return 'Вы проиграли!!!'
-        elif (red_five_x in joined_column and comp_sign == red_x) or (red_five_0 in joined_column and comp_sign == red_0):
+        elif (red_five_x in joined_column and comp_sign == red_x) or (
+                red_five_0 in joined_column and comp_sign == red_0):
             return 'Вы победили!!!'
     diagonals_1 = []
     diagonals_2 = []
     for p in range(2 * 9):
-        diagonals_1.append([matrix[p - q][q] for q in range(max(0, p - len(matrix[i]) + 1), min(p, len(matrix[i]) - 1) + 1)])
-        diagonals_2.append([matrix[len(matrix[i]) - p + q - 1][q] for q in range(max(0, p - len(matrix[i]) + 1), min(p, len(matrix[i]) - 1) + 1)])
+        diagonals_1.append(
+            [matrix[p - q][q] for q in range(max(0, p - len(matrix[i]) + 1), min(p, len(matrix[i]) - 1) + 1)])
+        diagonals_2.append([matrix[len(matrix[i]) - p + q - 1][q] for q in
+                            range(max(0, p - len(matrix[i]) + 1), min(p, len(matrix[i]) - 1) + 1)])
     for el in diagonals_1:
         joined_el = ''.join(el)
         if (green_five_x in joined_el and hum_sign == green_x) or (green_five_0 in joined_el and hum_sign == green_0):
@@ -123,7 +162,8 @@ while flag:
             count += 1
     print('Добро пожаловать в игру "Обратные крестики-нолики!!!"')
     show_matrix_board(matrix_board)
-    print('Перед вами поле 10 х 10 с ячейками, в которые необходимо записывать значения "Х" или "0".\nЦвет, выбранного вами знака, будет "зеленым", а компьютера - "красным".')
+    print(
+        'Перед вами поле 10 х 10 с ячейками, в которые необходимо записывать значения "Х" или "0".\nЦвет, выбранного вами знака, будет "зеленым", а компьютера - "красным".')
     print()
     while True:
         human_sign = input('Введите знак, которым хотите играть, "Х" или "0": ').upper()
@@ -144,7 +184,7 @@ while flag:
                 print(examination(matrix_board, human_sign, computer_sign))
                 break
             print(f'Компьютер вводит номер ячейки, в которую хочет записать "{computer_sign}".')
-            matrix_board = record_computer_sign(computer_sign, matrix_board)
+            matrix_board = record_computer_sign(computer_sign, human_sign, matrix_board)
             show_matrix_board(matrix_board)
             if examination(matrix_board, human_sign, computer_sign):
                 print(examination(matrix_board, human_sign, computer_sign))
@@ -154,7 +194,7 @@ while flag:
         else:
             print()
             print(f'Компьютер вводит номер ячейки, в которую хочет записать "{computer_sign}".')
-            matrix_board = record_computer_sign(computer_sign, matrix_board)
+            matrix_board = record_computer_sign(computer_sign, human_sign, matrix_board)
             show_matrix_board(matrix_board)
             if examination(matrix_board, human_sign, computer_sign):
                 print(examination(matrix_board, human_sign, computer_sign))
@@ -174,9 +214,3 @@ while flag:
         elif answer == 'n':
             flag = False
             break
-
-
-
-
-
-
